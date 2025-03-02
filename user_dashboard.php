@@ -1,13 +1,10 @@
 <?php
 session_start();
 require 'config.php';
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+header("Content-Type: text/html; charset=UTF-8");
 
 
-// Verificar si el usuario estèŠ logueado
+// Verificar si el usuario está logueado
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -15,8 +12,18 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Consultar todas las URLs del usuario logueado
-$stmt = $conn->prepare("SELECT * FROM url WHERE user_id = ?");
+// Consultar todas las URLs del usuario logueado junto con el número de clics
+$query = "
+    SELECT urls.*, 
+           COALESCE(COUNT(url_clicks.id), 0) AS clicks 
+    FROM urls
+    LEFT JOIN url_clicks ON urls.id = url_clicks.url_id
+    WHERE urls.user_id = ?
+    GROUP BY urls.id
+    ORDER BY urls.created_at DESC";  // Ordenamos por fecha descendente
+
+
+$stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -26,34 +33,16 @@ $stmt->close();
 
 <!DOCTYPE html>
 <html lang="es">
+    
 <head>
-    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Usuario</title>
+    <title>Panel de usuario</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 min-h-screen">
-    <!-- Menè¿† de navegaciè»Šn -->
-    <nav class="bg-gray-800 p-4 text-white flex justify-between items-center">
-        <div class="text-lg font-semibold">Acortador de URLs</div>
-        <div class="space-x-4">
-            <a href="user_dashboard.php" class="hover:underline">Mis URLs</a>
-            <a href="user_statistics.php" class="hover:underline">Estadisticas</a>
-            <a href="user_settings.php" class="hover:underline">Configuracion</a>
-            <a href="logout.php" class="hover:underline">Cerrar sesion</a>
-        </div>
-    </nav>
-<script src='https://cdn.jsdelivr.net/npm/@widgetbot/crate@3' async defer>
-    new Crate({
-        server: '894776955336007711', // LatinBattle.com
-        channel: '905234529499889675' // #ðŸ§¾-noticias
-    })
-</script>
-<center>
-
-<script src="https://cdn.jsdelivr.net/npm/@widgetbot/html-embed"></script>
-
-
+    
+    
+   <?php include 'header.php'; ?>
 
     <!-- Contenido principal -->
     <div class="flex justify-center mt-6">
@@ -67,15 +56,16 @@ $stmt->close();
                 <button id="shortenBtn" class="mt-3 w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold p-3 rounded-xl transition-all">Acortar</button>
             </div>
 
-            <!-- Secciè»Šn de historial de URLs -->
+            <!-- Sección de historial de URLs -->
             <h2 class="text-lg font-semibold text-gray-800 dark:text-white mt-6">Historial de URLs</h2>
             <ul id="history" class="mt-2 text-sm text-gray-700 dark:text-gray-300">
                 <?php foreach ($urls as $url): ?>
                     <li>
-                        <a href="<?php echo htmlspecialchars($url['original_url']); ?>" target="_blank" class="text-blue-500 hover:underline">
-                            <?php echo htmlspecialchars($url['short_code']); ?>
-                        </a>
-                        - Clics: <?php echo $url['clicks']; ?> - Fecha de creacion: <?php echo $url['created_at']; ?>
+						<a href="https://www.latinbattle.com/url/<?php echo htmlspecialchars($url['short_code']); ?>" target="_blank" class="text-blue-500 hover:underline">
+						https://www.latinbattle.com/url/<?php echo htmlspecialchars($url['short_code']); ?>
+						</a>
+
+                        - Clics: <?php echo $url['clicks']; ?> - Fecha: <?php echo $url['created_at']; ?>
                     </li>
                 <?php endforeach; ?>
             </ul>
