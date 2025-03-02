@@ -75,4 +75,3 @@ Este proyecto está licenciado bajo la **MIT License**. Puedes ver más detalles
 
 ---
 **🔹 Desarrollado por:** [Azzlaer](https://github.com/Azzlaer) 🚀
-
